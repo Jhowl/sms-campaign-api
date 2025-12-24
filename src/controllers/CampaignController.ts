@@ -27,6 +27,15 @@ export class CampaignController {
     }
   };
 
+  listCampaigns = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const campaigns = await this.service.listCampaigns();
+      res.status(200).json({ campaigns });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   addContacts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const campaignId = Number(req.params.id);
@@ -78,6 +87,24 @@ export class CampaignController {
 
       const stats = await this.service.getStats(campaignId);
       res.status(200).json({ campaign_id: campaignId, ...stats });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  listRenderedMessages = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const campaignId = Number(req.params.id);
+      if (!Number.isInteger(campaignId) || campaignId <= 0) {
+        throw new ApiError(400, 'Invalid campaign id');
+      }
+
+      const messages = await this.service.listRenderedMessages(campaignId);
+      res.status(200).json({ campaign_id: campaignId, messages });
     } catch (err) {
       next(err);
     }

@@ -7,12 +7,28 @@ import { buildCampaignRoutes } from './routes/campaignRoutes';
 import { ApiError } from './utils/errors';
 
 export function createApp(db: SqliteDatabase): express.Express {
+  const app = express();
+
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
+    next();
+  });
+
+  app.use(express.json());
+
+  app.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok' });
+  });
+
   const service = new CampaignService(db);
   const controller = new CampaignController(service);
 
-  const app = express();
-
-  app.use(express.json());
   app.use(buildCampaignRoutes(controller));
 
   app.use((_req, res) => {
@@ -30,10 +46,6 @@ export function createApp(db: SqliteDatabase): express.Express {
     }
     const message = err instanceof Error ? err.message : 'Unknown error';
     res.status(500).json({ error: message });
-  });
-
-    app.get('/health', (_req, res) => {
-    res.status(200).json({ status: 'ok' });
   });
 
   return app;

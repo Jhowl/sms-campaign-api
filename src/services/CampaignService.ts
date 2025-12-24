@@ -1,5 +1,5 @@
 import type { SqliteDatabase } from '../db/sqlite';
-import type { Campaign, Contact } from '../models/types';
+import type { Campaign, CampaignSummary, Contact, RenderedMessage } from '../models/types';
 import { ApiError, isSqliteConstraintError } from '../utils/errors';
 import { normalizePhone, renderMessage } from '../utils/phone';
 
@@ -78,6 +78,12 @@ export class CampaignService {
     }
 
     const failureRate = 0.05 + Math.random() * 0.05;
+    const failureTarget = Math.floor(contacts.length * failureRate);
+    const failureSet = new Set<number>();
+    while (failureSet.size < failureTarget) {
+      const index = Math.floor(Math.random() * contacts.length);
+      failureSet.add(contacts[index].id);
+    }
     let sent = 0;
     let failed = 0;
 
@@ -85,7 +91,7 @@ export class CampaignService {
       await this.db.exec('BEGIN');
       for (const contact of contacts) {
         const message = renderMessage(campaign.message_template, contact.first_name);
-        const isFailed = Math.random() < failureRate;
+        const isFailed = failureSet.has(contact.id);
         const status = isFailed ? 'failed' : 'sent';
         const error = isFailed ? 'Simulated delivery failure' : null;
 
@@ -141,6 +147,41 @@ export class CampaignService {
       sent: stats?.sent ?? 0,
       failed: stats?.failed ?? 0,
     };
+  }
+
+  async listRenderedMessages(campaignId: number): Promise<RenderedMessage[]> {
+    const campaign = await this.getCampaign(campaignId);
+    if (!campaign) {
+      throw new ApiError(404, 'Campaign not found');
+    }
+
+    const contacts = await this.db.all<Contact>(
+      'select id, campaign_id, phone, first_name from contacts where campaign_id = ?',
+      [campaignId],
+    );
+
+    return contacts.map((contact) => ({
+      contact_id: contact.id,
+      phone: contact.phone,
+      first_name: contact.first_name,
+      message: renderMessage(campaign.message_template, contact.first_name),
+    }));
+  }
+
+  async listCampaigns(): Promise<CampaignSummary[]> {
+    return this.db.all<CampaignSummary>(
+      `select
+        c.id,
+        c.name,
+        c.message_template,
+        c.created_at,
+        (select count(*) from contacts where campaign_id = c.id) as contacts_count,
+        (select count(*) from deliveries where campaign_id = c.id) as total_deliveries,
+        (select count(*) from deliveries where campaign_id = c.id and status = 'sent') as sent,
+        (select count(*) from deliveries where campaign_id = c.id and status = 'failed') as failed
+      from campaigns c
+      order by c.id desc`,
+    );
   }
 
   private async getCampaign(campaignId: number): Promise<Campaign | undefined> {

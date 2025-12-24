@@ -1,4 +1,7 @@
 export function normalizePhone(input: string): string {
+  if (/[A-Za-z]/.test(input)) {
+    throw new Error('Invalid phone number');
+  }
   const digits = input.replace(/\D/g, '');
   if (digits.length < 10 || digits.length > 15) {
     throw new Error('Invalid phone number');

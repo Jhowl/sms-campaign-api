@@ -121,6 +121,9 @@ Response `200`
 - `409` duplicate phone per campaign.
 - `500` unexpected server errors.
 
+## Frontend (React)
+The UI lives in `frontend/` and talks to the API via the base URL field.
+
 ```bash
 cd frontend
 npm install

@@ -54,4 +54,32 @@ export class CampaignController {
       next(err);
     }
   };
+
+  sendCampaign = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const campaignId = Number(req.params.id);
+      if (!Number.isInteger(campaignId) || campaignId <= 0) {
+        throw new ApiError(400, 'Invalid campaign id');
+      }
+
+      const result = await this.service.sendCampaign(campaignId);
+      res.status(200).json({ campaign_id: campaignId, ...result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const campaignId = Number(req.params.id);
+      if (!Number.isInteger(campaignId) || campaignId <= 0) {
+        throw new ApiError(400, 'Invalid campaign id');
+      }
+
+      const stats = await this.service.getStats(campaignId);
+      res.status(200).json({ campaign_id: campaignId, ...stats });
+    } catch (err) {
+      next(err);
+    }
+  };
 }

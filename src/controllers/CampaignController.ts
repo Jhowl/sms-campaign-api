@@ -26,4 +26,32 @@ export class CampaignController {
       next(err);
     }
   };
+
+  addContacts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const campaignId = Number(req.params.id);
+      if (!Number.isInteger(campaignId) || campaignId <= 0) {
+        throw new ApiError(400, 'Invalid campaign id');
+      }
+
+      const payload = req.body as {
+        contacts?: Array<{ phone: string; first_name?: string | null }>;
+        phone?: string;
+        first_name?: string | null;
+      };
+
+      const contacts =
+        payload.contacts ??
+        (payload.phone ? [{ phone: payload.phone, first_name: payload.first_name }] : []);
+
+      if (!Array.isArray(contacts) || contacts.length === 0) {
+        throw new ApiError(400, 'contacts array is required');
+      }
+
+      const added = await this.service.addContacts(campaignId, contacts);
+      res.status(201).json({ campaign_id: campaignId, added });
+    } catch (err) {
+      next(err);
+    }
+  };
 }
